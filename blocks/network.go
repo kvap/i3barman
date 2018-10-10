@@ -44,11 +44,11 @@ func (n *Network) render(conns []network.Connection) []BlockData {
 	}
 
 	if len(data) == 0 {
-		data = append(data, BlockData{
-			Name: n.name,
-			FullText: "no network",
-			Urgent: true,
-		})
+		d := n.defaults
+		d.Name = n.name
+		d.FullText = "no network"
+		d.Urgent = true
+		data = append(data, d)
 	}
 
 	return data
