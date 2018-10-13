@@ -19,12 +19,12 @@ func NewManager() (*Manager, error) {
 	return &Manager{conn}, nil
 }
 
-func (nm *Manager) getActiveConnectionProps(path dbus.ObjectPath) map[string]dbus.Variant {
+func (nm *Manager) getProps(path dbus.ObjectPath, iface string) map[string]dbus.Variant {
 	ac := nm.conn.Object("org.freedesktop.NetworkManager", path)
 
 	var props map[string]dbus.Variant
 
-	err := ac.Call("org.freedesktop.DBus.Properties.GetAll", 0, "org.freedesktop.NetworkManager.Connection.Active").Store(&props)
+	err := ac.Call("org.freedesktop.DBus.Properties.GetAll", 0, iface).Store(&props)
 	if err != nil {
 		panic(err)
 	}
@@ -109,13 +109,15 @@ func (nm *Manager) pathsToConnections(paths []dbus.ObjectPath) []Connection {
 	conns := make([]Connection, len(paths), len(paths))
 
 	for i, path := range paths {
-		props := nm.getActiveConnectionProps(path)
+		props := nm.getProps(path, "org.freedesktop.NetworkManager.Connection.Active")
 		conns[i].Type = props["Type"].Value().(string)
 		conns[i].Name = props["Id"].Value().(string)
 		conns[i].Good = props["State"].Value().(uint32) == 2
 
 		if conns[i].Type == "802-11-wireless" {
-			accessPointPath := props["SpecificObject"].Value().(dbus.ObjectPath)
+			devPath := props["Devices"].Value().([]dbus.ObjectPath)[0]
+			devProps := nm.getProps(devPath, "org.freedesktop.NetworkManager.Device.Wireless")
+			accessPointPath := devProps["ActiveAccessPoint"].Value().(dbus.ObjectPath)
 			accessPointProps := nm.getAccessPointProps(accessPointPath)
 			// MaxBitrate is in kilobits per second
 			conns[i].Rate = accessPointProps["MaxBitrate"].Value().(uint32) * 1000
