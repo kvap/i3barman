@@ -22,24 +22,53 @@ func (n *Network) Name() string {
 	return n.name
 }
 
+const (
+	iconWireless = '\uf1eb' // 
+	iconShield = '\uf3ed' // 
+	iconLocked = '\uf023' // 
+	iconUnlocked = '\uf3c1' // 
+	iconMobile = '\uf10b' // 
+	iconWired = '\uf6ff' // 
+)
+
+func pangoFA(icon rune) string {
+	return fmt.Sprintf(`<span face="Font Awesome 5 Free">%c</span>`, icon)
+}
+
 func (n *Network) render(conns []network.Connection) []BlockData {
 	var data []BlockData
 
 	for _, c := range conns {
 		d := n.defaults
-		d.Name = n.name
+
 		switch c.Type {
 		case "vpn":
-			d.FullText = fmt.Sprintf("vpn:%s", c.Name)
-			d.ShortText = "vpn"
-			d.Urgent = !c.Good
+			if c.Good {
+				d.FullText = pangoFA(iconLocked)
+			} else {
+				d.FullText = pangoFA(iconUnlocked)
+			}
+			if n.long {
+				d.FullText += c.Name
+			}
+		case "802-3-ethernet":
+			d.FullText = pangoFA(iconWired)
 		case "802-11-wireless":
-			d.FullText = fmt.Sprintf("wifi:%s@%dMbps", c.Name, c.Rate / 1000000)
-			d.ShortText = fmt.Sprintf("wifi:%s", c.Name)
-			d.Urgent = !c.Good
+			d.FullText = pangoFA(iconWireless) + c.Name
+			if n.long {
+				d.FullText += fmt.Sprintf("@%dMbps", c.Rate / 1000000)
+			}
+		case "gsm":
+			d.FullText = pangoFA(iconMobile)
 		default:
 			continue
 		}
+
+		d.Name = n.name
+		d.Urgent = !c.Good
+		d.Separator = n.long
+		d.Markup = "pango"
+
 		data = append(data, d)
 	}
 
@@ -90,7 +119,7 @@ func NewNetwork(defaults BlockData, name string, out chan<- BlockUpdate) *Networ
 			select {
 			case <-n.clicks:
 				n.long = !n.long
-				//update()
+				update(conns)
 			case conns := <-updates:
 				update(conns)
 			}
