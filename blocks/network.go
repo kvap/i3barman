@@ -66,7 +66,10 @@ func (n *Network) render(conns []network.Connection) []BlockData {
 
 		d.Name = n.name
 		d.Urgent = !c.Good
-		d.Separator = n.long
+		if !n.long {
+			d.Separator = false
+			d.SeparatorBlockWidth = 0
+		}
 		d.Markup = "pango"
 
 		data = append(data, d)
